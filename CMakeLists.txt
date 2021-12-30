@@ -19,7 +19,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Epson_CP Epson_CP.c )
+add_executable(Epson_CP Epson_CP.c keymap.c )
 
 pico_set_program_name(Epson_CP "Epson_CP")
 pico_set_program_version(Epson_CP "0.1")
