@@ -115,7 +115,7 @@ int main()
 	       kp.row != last_kp.row ||
 	       kp.col != last_kp.col)
 	      && kp.type == DOWN) {
-	    printf("Key down: (%d, %d)\n",kp.row,kp.col);
+	    printf("Key down: %s (%d, %d)\n",keyname(keycode(kp.row,kp.col)),kp.row,kp.col);
 	  }
 	  last_kp = kp;
         } else if (c >= '0' && c <= '9') {
