@@ -1,19 +1,55 @@
+Pinout
+======
 
+The FFC to the LCD has the following pinout:
+| Pin | Purpose |
+|-----|---------|
+| 1   | Clock (~6MHz) | 
+| 2   | GND |
+| 3   | Command (active low) | 
+| 4   | Data 2 | 
+| 5   | 1.8V |
+| 6   | Enable (active high) | 
+| 7   | GND |
+| 8   | Data 1 | 
+| 9   | Data 0 | 
+| 10  | 3.3V |
 
-It appears we have four lines transmitting data: 
-* CLK
-* DAT0
-* DAT1
-* DAT2
+Protocol
+========
+
+We have one clock line (FFC 1), three data lines (FFC9, FFC8, FFC4), one chip
+enable line (FFC 6), and one command line (FFC 3). There appear to be two modes
+of communication: sending a command, and sending frame data.
+
+All data is clocked in on rising pulses.
+
+Command transaction
+-------------------
+The command transactions consist of three bytes of data. 
+1. The command line is asserted LOW. (t=0)
+2. The data lines are set to the correct bit values. In a command transaction,
+   DAT1 and DAT2 are set low; only DAT0 contains data.
+3. The first clock starts at t=375nS.
+4. Three bytes are clocked in, MSB first, at 6MHz.
+5. There is a 750nS gap between the first two and the third byte; it's unclear why or
+   if it's necessary.
+6. The command line goes high at 625nS after the last bit.
+7. The command line stays high for about 200nS before the next command.
+
+Data transaction
+----------------
+A data transaction always immediately follows a command transaction of the form `0x31 0x00 0x01`.
+It begins approximately 1uS after the command line goes high.
+
+The entire frame is clocked in at 6MHz on three lines (DAT0, DAT1, DAT2). It appears that 
+each represents one color channel. There are 321 bytes per line, and 120 lines.
+
+Other
+=====
 
 Some of the data lines are shared with the button-scanning hardware, but as the clock line is kept
 low during button scans and LED updates, this doesn't impact the LCD interface.
-
-The LCD appears to receive commands on the DAT0 line, and only uses DAT1 and DAT2 for additional
-color channels during screen updates.
-
-Before a screen is sent, there is a three-byte sequence. A screen is sent as a series of lines,
-each terminated by a single byte-- unlikely parity, almost always the same? Maybe it's an attribute.
 
 Configuration transaction:
 ```
@@ -64,6 +100,7 @@ Could 60 XX XX be backlight?
 
 
 HERE'S THE PLAN:
+* Check other lines, make sure we're not missing a reset (we still have two mystery pins)
 * replay configuration block
 * replay first image
 
