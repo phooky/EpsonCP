@@ -93,10 +93,9 @@ int main()
     stdio_init_all();
     initialize_gpio();
     init_video();
-    init_lcd();
-    send_image();
     puts("Hello, world!");
     gpio_put(SP_OE,0);
+    init_lcd();
     uint8_t rowval = 0;
     while (true) {
         int c = getchar_timeout_us(2);
@@ -118,8 +117,6 @@ int main()
             reset_usb_boot(0,0);
 	} else if (c == 'v') {
 	  c = -1;
-	  init_video();
-	  init_lcd();
 	  send_image();
 	} else if (c == 's') {
 	  // do scan

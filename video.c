@@ -52,26 +52,32 @@ void clock_byte(uint8_t b) {
 }
 
 void send_command(uint8_t* data) {
+  sleep_us(5);
+  gpio_put(VP_DAT1,0);
+  gpio_put(VP_DAT2,0);
   gpio_put(VP_CMD,0);
   sleep_us(5);
   clock_byte(*(data++));
   clock_byte(*(data++));
-  sleep_us(5);
   clock_byte(*(data++));
   gpio_put(VP_CMD,1);
-  sleep_us(5);
 }
 
 
 void send_image() {
-  sleep_us(50);
+  sleep_us(250);
+  gpio_put(VP_DAT1,0);
+  gpio_put(VP_DAT2,0);
   uint8_t bl[] = {0x60, 0x00, 0x01};
   send_command(bl);
-  sleep_us(50);
+  sleep_us(250);
   send_command(msg_start_frame);
-  for (int y = 0; y < 120; y++) {
+  for (int y = 0; y < 121; y++) {
     for (int x = 0; x < 321; x++) {
-      clock_byte(x+y);
+      if (x == 1 || x == 318 || y == 1 || y == 118) clock_byte(255);
+      else if (x == 320) clock_byte(0x59);
+      else
+	clock_byte((x^y)&0x7f);
     }
   }
 }
