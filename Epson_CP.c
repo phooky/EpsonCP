@@ -3,20 +3,8 @@
 #include "pico/bootrom.h"
 
 #include "keymap.h"
-
-#define ARRLEN(arr) (sizeof(arr)/sizeof(arr[0]))
-
-typedef uint pin_t;
-
-enum {
-  PIN_CLK = 0,     // 595 + 165
-  PIN_SER_OUT = 1, // 595
-  PIN_OE = 2,      // 595
-  PIN_RCLK = 3,    // 595, also shift/load' for 165
-  PIN_SER_IN = 4,      // 165
-
-};
-
+#include "pins.h"
+#include "video.h"
 
 // RCLK shifts to registers on rising edge;
 // SH/LD' loads during LOW but needs to be high
@@ -37,11 +25,11 @@ static inline void init_pin(pin_t pin, uint value) {
 }
 
 void initialize_gpio() {
-  gpio_init(PIN_SER_IN);
-  init_pin(PIN_CLK,0);
-  init_pin(PIN_SER_OUT,0);
-  init_pin(PIN_OE,1);
-  init_pin(PIN_RCLK,0);
+  gpio_init(SP_SER_IN);
+  init_pin(SP_CLK,0);
+  init_pin(SP_SER_OUT,0);
+  init_pin(SP_OE,1);
+  init_pin(SP_RCLK,0);
 }
 
 void delay_bit() {
@@ -50,23 +38,23 @@ void delay_bit() {
 
 uint8_t scan_cols(uint8_t next_rows) {
   uint8_t scan;
-  gpio_put(PIN_RCLK,1); // Sample columns for T
+  gpio_put(SP_RCLK,1); // Sample columns for T
   delay_bit();
   for (size_t i = 0; i < 8; i++) {
     delay_bit();
-    gpio_put(PIN_CLK,0);
+    gpio_put(SP_CLK,0);
     delay_bit();
-    scan = (scan << 1) | (gpio_get(PIN_SER_IN)?0:1);
-    gpio_put(PIN_SER_OUT,(next_rows & (1 << (7-i) ))?1:0);
+    scan = (scan << 1) | (gpio_get(SP_SER_IN)?0:1);
+    gpio_put(SP_SER_OUT,(next_rows & (1 << (7-i) ))?1:0);
     delay_bit();
-    gpio_put(PIN_CLK,1);
+    gpio_put(SP_CLK,1);
     delay_bit();
   }
-  gpio_put(PIN_RCLK,0);
+  gpio_put(SP_RCLK,0);
   delay_bit();
-  gpio_put(PIN_RCLK,1); // Latch rowval for T+1
+  gpio_put(SP_RCLK,1); // Latch rowval for T+1
   delay_bit();
-  gpio_put(PIN_RCLK,0); // Load columns for T+1
+  gpio_put(SP_RCLK,0); // Load columns for T+1
   return scan;
 }
 
@@ -94,7 +82,7 @@ Keypress scan() {
   for (uint8_t i = 1; i <= 8; i++) {
     uint8_t cols = scan_cols(1<<(i%8));
     if (cols) {
-      cur_kp = (Keypress){ i, 32-__builtin_clz(cols), DOWN };
+      cur_kp = (Keypress){ i-1, 31-__builtin_clz(cols), DOWN };
     }
   }
   return cur_kp;
@@ -103,9 +91,12 @@ Keypress scan() {
 int main()
 {
     stdio_init_all();
+    init_video();
+    init_lcd();
+    send_image();
     initialize_gpio();
     puts("Hello, world!");
-    gpio_put(PIN_OE,0);
+    gpio_put(SP_OE,0);
     uint8_t rowval = 0;
     while (true) {
         int c = getchar_timeout_us(2);
