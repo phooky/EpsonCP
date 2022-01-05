@@ -15,6 +15,25 @@ The FFC to the LCD has the following pinout:
 | 9   | Data 0 | 
 | 10  | 3.3V |
 
+The FFC from the CPU to the control board has this pinout:
+| Pin | Purpose |
+|-----|---------|
+| 1   | Piezo buzzer |
+| 2   | 1.8V supply |
+| 3   | GND |
+| 4   | 3.3V supply |
+| 5   | Shift register clock / Data 2 |
+| 6   | CPU to shift register / Data 0 | 
+| 7   | Video clock (~6MHz) |
+| 8   | Command (active low) |
+| 9   | Data 1 |
+| 10  | ON button |
+| 11  | Shift/load |
+| 12  | SR Output enable |
+| 13  | Shift register to CPU |
+| 14  | GND |
+
+
 Protocol
 ========
 
