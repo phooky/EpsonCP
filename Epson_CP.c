@@ -91,10 +91,10 @@ Keypress scan() {
 int main()
 {
     stdio_init_all();
+    initialize_gpio();
     init_video();
     init_lcd();
     send_image();
-    initialize_gpio();
     puts("Hello, world!");
     gpio_put(SP_OE,0);
     uint8_t rowval = 0;
@@ -116,6 +116,11 @@ int main()
         } else if (c == 'R') {
             c = -1;
             reset_usb_boot(0,0);
+	} else if (c == 'v') {
+	  c = -1;
+	  init_video();
+	  init_lcd();
+	  send_image();
 	} else if (c == 's') {
 	  // do scan
 	  scan_cols(0x01);
