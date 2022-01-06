@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include "pins.h"
 #include "pico/stdlib.h"
+#include "video.pio.h"
 
 size_t msg_init_lcd_len = 144;
 uint8_t msg_init_lcd[] = {

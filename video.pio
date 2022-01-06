@@ -1,0 +1,59 @@
+
+/* The FFC from the CPU to the control board has this pinout: */
+/* | Pin | Purpose | */
+/* |-----|---------| */
+/* | 1   | Piezo buzzer | */
+/* | 2   | 1.8V supply | */
+/* | 3   | GND | */
+/* | 4   | 3.3V supply | */
+/* | 5   | Shift register clock / Data 2 | */
+/* | 6   | CPU to shift register / Data 0 |  */
+/* | 7   | Video clock (~6MHz) | */
+/* | 8   | Command (active low) | */
+/* | 9   | Data 1 | */
+/* | 10  | ON button | */
+/* | 11  | Shift/load | */
+/* | 12  | SR Output enable | */
+/* | 13  | Shift register to CPU | */
+/* | 14  | GND | */
+
+// D0, D1, D2 should be contiguous OUT on PIO
+// Command, Video clock should be contiguous SET on PIO
+
+.program vid_send
+
+.define VP_CLK  1
+.define VP_DAT0 2
+.define VP_DAT1 3
+.define VP_DAT2 4
+
+// Pin summary:
+// OUT pins: start 2, size 3 (data)
+// side-set pins: start 1, size 1 (clock)
+// We're aiming for 6MHz clock, so a 24MHz PIO speed. Divider target is about 5.2.
+// I'll start out closer to 10, to make sure we can operate at a slower speed first.
+
+.side_set 1
+
+.wrap_target
+OUT PINS, 3      side 0 [4]
+NOP              side 1 [4]
+.wrap
+
+% c-sdk {
+static inline void pio_vid_init(PIO pio, uint sm, uint offset) {
+  for (uint i = VP_CLK; i <= VP_DAT2; i++) {
+    pio_gpio_init(pio, i);
+  }
+  pio_sm_config conf = vid_send_program_get_default_config(offset);
+  sm_config_set_out_pins(&conf, 2, 3);
+  sm_config_set_out_shift(&conf, false, true, 24);
+  sm_config_set_sideset_pins(&conf, 1);
+  sm_config_set_clkdiv(&conf, 10.0);
+  sm_config_set_wrap(&conf, vid_send_wrap_target, vid_send_wrap);
+  pio_sm_set_pindirs_with_mask(pio, sm, 0x1e, 0x1e);
+  pio_sm_init(pio, sm, offset, &conf);
+  pio_sm_set_enabled(pio, sm, true);
+}
+
+%}
