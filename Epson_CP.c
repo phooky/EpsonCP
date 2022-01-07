@@ -91,9 +91,9 @@ Keypress scan() {
 int main()
 {
     stdio_init_all();
+    puts("Hello, world!");
     initialize_gpio();
     init_video();
-    puts("Hello, world!");
     gpio_put(SP_OE,0);
     init_lcd();
     uint8_t rowval = 0;
