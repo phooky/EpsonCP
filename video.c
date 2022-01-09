@@ -37,11 +37,29 @@ void init_video() {
   init_pin2(VP_DAT1,0);
   init_pin2(VP_DAT2,0);
   init_pin2(VP_CMD,1);
+  PIO pio = pio0;
+  uint sm = 0;
+  uint offset = pio_add_program(pio, &vid_send_program);
+  pio_vid_init(pio,sm,offset);
 }
 
+uint32_t interleave_zero(uint32_t v) {
+  v = (v | (v<<8)) & 0xf00f;
+  v = (v | (v<<4)) & 0xc30c3;
+  v = (v | (v<<2)) & 0xc249249;
+  return v;
+}
+
+uint32_t interleave(uint8_t r, uint8_t g, uint8_t b) {
+  // high 24 bits should be r7g7b7r6g6b6 .. r0g0b0 00000000
+  return (interleave_zero(r) << 10) |
+    (interleave_zero(g) << 9) |
+    (interleave_zero(b) << 8);
+}
 
 void clock_byte(uint8_t b) {
   int i = 8;
+  uint32_t b32;
   do {
     i--;
     gpio_put(VP_CLK,0);
