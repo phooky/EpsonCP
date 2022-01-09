@@ -65,10 +65,19 @@ The command transactions consist of three bytes of data.
    DAT1 and DAT2 are set low; only DAT0 contains data.
 3. The first clock starts at t=375nS.
 4. Three bytes are clocked in, MSB first, at 6MHz.
-5. There is a 750nS gap between the first two and the third byte; it's unclear why or
-   if it's necessary.
-6. The command line goes high at 625nS after the last bit.
-7. The command line stays high for about 200nS before the next command.
+5. The command line goes high at 625nS after the last bit.
+6. The command line stays high for about 200nS before the next command.
+
+Probable commands
+-----------------
+
+| 1st byte | 2nd byte | 3rd byte | Interpretation |
+|----------|----------|----------|----------------|
+| 0x31     | 0x00     | 0x01     | Start sending video frame data |
+| 0x32     | X        | X        | Set horizontal resolution to X |
+| 0x33     | Y        | Y        | Set vertical resolution to Y |
+| 0x60     | 0x00     | V        | Turn on backlight (V=1 on) | 
+
 
 Data transaction
 ----------------
@@ -77,6 +86,33 @@ It begins approximately 1uS after the command line goes high.
 
 The entire frame is clocked in at 6MHz on three lines (DAT0, DAT1, DAT2). It appears that 
 each represents one color channel. There are 321 bytes per line, and 120 lines.
+
+Configuration sequence
+======================
+
+Most of this is going to be secret sauce; we can always try removing/altering/inserting commands
+but it doesn't seem very valuable to do so.
+
+```
+pos    data
+0000   0b 05 05   30 00 01   65 00 08   50 00 09 
+000c   50 00 0a   58 00 05   37 00 01   37 00 00
+0018   0d 00 01   0d 00 00   36 00 01   7f 00 00
+0024   20 0f ef   32 01 40   33 00 77   34 00 00
+0030   35 00 7c   38 03 ff   39 03 ff   00 00 63
+003c   01 00 24   02 01 df   03 01 3f   04 00 07
+0048   05 02 68   06 00 0c   07 00 08   08 00 ef
+0054   09 00 00   0a 00 08   0e 00 00   10 00 00
+0060   12 00 31   13 00 00   70 00 01   0c 00 03
+006c   22 00 0d   23 00 00   22 00 05   23 00 00
+0078   22 00 0d   23 00 00   22 60 00   23 00 00
+0084   22 40 00   23 00 00   22 00 0f   23 00 00
+```
+
+The backlight on command `60 00 01` should be sent to make the screen visible.
+
+Every frame needs to be proceeded by a `31 00 01` command.
+
 
 Other
 =====
