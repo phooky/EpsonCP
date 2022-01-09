@@ -1,3 +1,17 @@
+Description
+===========
+
+This is the control panel from an Epson WF-2540 inkjet printer.
+
+The panel has a 14-pin FFC that runs to the CPU, and a 10-pin FFC that goes to the LCD
+subassembly. Most of the pins on the LCD FFC are connected to pins on the CPU FFC.
+
+Several of the LCD data pins are also used by the button scanning logic; LCD communications
+are paused and the video clock line is held low while the buttons are checked and resume once
+the button scan is finished.
+
+The controller IC for the LCD is labelled "EPSON E02A46EA". No documentation is available.
+
 Pinout
 ======
 
