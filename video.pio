@@ -57,8 +57,8 @@ SET PINS, 1      side 0 [4]
 .wrap
 
 % c-sdk {
-static inline void pio_vid_init_pins(PIO pio, uint sm, uint offset) {
-  for (uint i = VP_CMD; i <= VP_DAT2; i++) {
+static inline void pio_vid_init_pins(PIO pio) {
+  for (uint i = VP_CLK; i <= VP_DAT2; i++) {
     pio_gpio_init(pio, i);
   }
 }
@@ -69,7 +69,7 @@ static inline void pio_vid_init_data(PIO pio, uint sm, uint offset) {
   sm_config_set_out_pins(&conf, 2, 3);
   sm_config_set_out_shift(&conf, false, true, 24);
   sm_config_set_sideset_pins(&conf, 1);
-  sm_config_set_clkdiv(&conf, 10.0);
+  sm_config_set_clkdiv(&conf, 5.0);
   pio_sm_set_pindirs_with_mask(pio, sm, 0x1e, 0x1e);
   pio_sm_init(pio, sm, offset, &conf);
   pio_sm_set_enabled(pio, sm, true);
