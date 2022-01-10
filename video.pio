@@ -83,7 +83,7 @@ static inline void pio_vid_init_cmd(PIO pio, uint sm, uint offset) {
   sm_config_set_set_pins(&conf, 0, 1);
   sm_config_set_out_pins(&conf, 2, 1);
   sm_config_set_out_shift(&conf, false, false, 24);
-  sm_config_set_sideset_pins(&conf, 8);
+  sm_config_set_sideset_pins(&conf, 1);
   sm_config_set_clkdiv(&conf, 10.0);
   pio_sm_set_pindirs_with_mask(pio, sm, 0x1f, 0x1f);
   pio_sm_init(pio, sm, offset, &conf);
