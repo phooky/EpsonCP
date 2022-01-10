@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/bootrom.h"
+#include "pico/multicore.h"
 
 #include "keymap.h"
 #include "pins.h"
@@ -33,7 +34,7 @@ void initialize_gpio() {
 }
 
 void delay_bit() {
-  sleep_us(80);
+  sleep_us(4);
 }
 
 uint8_t scan_cols(uint8_t next_rows) {
@@ -88,17 +89,23 @@ Keypress scan() {
   return cur_kp;
 }
 
+/*
+void video_core() {
+}
+*/
+
 int main()
 {
     stdio_init_all();
     puts("Hello, world!");
     initialize_gpio();
     init_video();
+    //multicore_launch_core1(video_core);
     gpio_put(SP_OE,0);
     init_lcd();
-    uint8_t rowval = 0;
+    
     while (true) {
-        int c = getchar_timeout_us(2);
+        int c = getchar_timeout_us(100);
         if (c == PICO_ERROR_TIMEOUT) {
 	  Keypress kp = scan();
 	  if ((kp.type != last_kp.type ||
@@ -108,11 +115,8 @@ int main()
 	    printf("Key down: %s (%d, %d)\n",keyname(keycode(kp.row,kp.col)),kp.row,kp.col);
 	  }
 	  last_kp = kp;
-        } else if (c >= '0' && c <= '9') {
-	  rowval = (rowval << 4) + (c - '0');
-        } else if (c >= 'a' && c <= 'f') {
-	  rowval = (rowval << 4) + (c - 'a') + 10;
         } else if (c == 'R') {
+            printf("*** Resetting into bootloader ***");
             c = -1;
             reset_usb_boot(0,0);
 	} else if (c == 'v') {
@@ -128,12 +132,10 @@ int main()
 	  }
 	  printf("--- scan done --- \n");
 	} else if (c == '\n' || c == '\r') {
-            printf("Setting 595 to %x.\n",rowval);
-	    printf("Received %x from last scan.\n",scan_cols(rowval));
-	  
+	  printf("Hello there.\n");
         } else {
-            printf("Unrecognized hex digit.\n");
-            c = -1; 
+	  printf("Unrecognized data.\n");
+	  c = -1; 
         }
     }
     return 0;

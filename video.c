@@ -32,19 +32,30 @@ static inline void init_pin2(pin_t pin, uint value) {
 }
 
 PIO vs_pio;
-uint vs_sm;
-uint vs_offset;
+uint vs_sm, cmd_sm;
+uint vs_offset, cmd_offset;
 
-void init_video() {
+void pins_to_sio() {
   init_pin2(VP_CLK,1);
   init_pin2(VP_DAT0,0);
   init_pin2(VP_DAT1,0);
   init_pin2(VP_DAT2,0);
   init_pin2(VP_CMD,1);
+}
+
+void pins_to_pio() {
+  pio_vid_init_pins(vs_pio);
+}
+
+void init_video() {
+  pins_to_sio();
   vs_pio = pio0;
   vs_sm = 0;
   vs_offset = pio_add_program(vs_pio, &vid_send_program);
+  cmd_sm = 1;
+  cmd_offset = pio_add_program(vs_pio, &command_send_program);
   pio_vid_init_data(vs_pio,vs_sm,vs_offset);
+  pio_vid_init_cmd(vs_pio,cmd_sm,cmd_offset);
 }
 
 uint32_t interleave_zero(uint32_t v) {
@@ -75,6 +86,12 @@ void clock_byte(uint8_t b) {
 }
 
 void send_command(uint8_t* data) {
+  /*
+  uint32_t cmd = data[0] << 24 | data[1] << 16 | data[2] << 8;
+  pins_to_pio();
+  pio_sm_put_blocking(vs_pio,cmd_sm,cmd);
+  pins_to_sio();
+  */
   sleep_us(5);
   gpio_put(VP_DAT1,0);
   gpio_put(VP_DAT2,0);
@@ -95,7 +112,7 @@ void send_image() {
   send_command(bl);
   sleep_us(250);
   send_command(msg_start_frame);
-  pio_vid_init_pins(vs_pio);
+  pins_to_pio();
   for (int y = 0; y < 121; y++) {
     for (int x = 0; x < 321; x++) {
       uint8_t r,g,b;
@@ -105,11 +122,7 @@ void send_image() {
       pio_sm_put_blocking(vs_pio,vs_sm,interleave(b,g,r));
     }
   }
-  init_pin2(VP_CLK,1);
-  init_pin2(VP_DAT0,0);
-  init_pin2(VP_DAT1,0);
-  init_pin2(VP_DAT2,0);
-  init_pin2(VP_CMD,1);
+  pins_to_sio();
 }
 
 void init_lcd() {
