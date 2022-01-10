@@ -31,9 +31,9 @@ static inline void init_pin2(pin_t pin, uint value) {
     gpio_put(pin, value);
 }
 
-PIO vs_pio;
-uint vs_sm, cmd_sm;
-uint vs_offset, cmd_offset;
+PIO pio = pio0;
+uint data_sm = 0, cmd_sm = 1;
+uint data_offset, cmd_offset;
 
 void pins_to_sio() {
   init_pin2(VP_CLK,1);
@@ -44,18 +44,40 @@ void pins_to_sio() {
 }
 
 void pins_to_pio() {
-  pio_vid_init_pins(vs_pio);
+  for (uint i = VP_CMD; i <= VP_DAT2; i++) {
+    pio_gpio_init(pio, i);
+  }
 }
 
+static inline bool pio_sm_check_stalled(PIO pio, uint sm) {
+  return !!(pio->fdebug & (1 << (PIO_FDEBUG_TXSTALL_LSB+sm)));
+}
+  
 void init_video() {
   pins_to_sio();
-  vs_pio = pio0;
-  vs_sm = 0;
-  vs_offset = pio_add_program(vs_pio, &vid_send_program);
-  cmd_sm = 1;
-  cmd_offset = pio_add_program(vs_pio, &command_send_program);
-  pio_vid_init_data(vs_pio,vs_sm,vs_offset);
-  pio_vid_init_cmd(vs_pio,cmd_sm,cmd_offset);
+  data_offset = pio_add_program(pio, &vid_send_program);
+  cmd_offset = pio_add_program(pio, &cmd_send_program);
+
+  pio_sm_config data_conf = data_send_program_get_default_config(data_offset);
+  pio_sm_config cmd_conf = cmd_send_program_get_default_config(cmd_offset);
+  // Configuration for data send program
+  sm_config_set_out_pins(&data_conf, 2, 3);
+  sm_config_set_out_shift(&data_conf, false, true, 24);
+  sm_config_set_sideset_pins(&data_conf, 1);
+  sm_config_set_clkdiv(&data_conf, 2.0);
+  pio_sm_set_pindirs_with_mask(pio, data_sm, 0x1e, 0x1e);
+  pio_sm_init(pio, data_sm, data_offset, &data_conf);
+
+  // Configuration for command send program
+  sm_config_set_set_pins(&cmd_conf, 0, 1);
+  sm_config_set_out_pins(&cmd_conf, 2, 1);
+  sm_config_set_out_shift(&cmd_conf, false, false, 24);
+  sm_config_set_sideset_pins(&cmd_conf, 1);
+  sm_config_set_clkdiv(&cmd_conf, 10.0);
+  pio_sm_set_pindirs_with_mask(pio, cmd_sm, 0x1f, 0x1f);
+  pio_sm_init(pio, cmd_sm, cmd_offset, &cmd_conf);
+  
+  //  pio_sm_set_enabled(pio, sm, true);
 }
 
 uint32_t interleave_zero(uint32_t v) {
@@ -86,12 +108,9 @@ void clock_byte(uint8_t b) {
 }
 
 void send_command(uint8_t* data) {
-  /*
   uint32_t cmd = data[0] << 24 | data[1] << 16 | data[2] << 8;
-  pins_to_pio();
   pio_sm_put_blocking(vs_pio,cmd_sm,cmd);
-  pins_to_sio();
-  */
+  /*
   sleep_us(5);
   gpio_put(VP_DAT1,0);
   gpio_put(VP_DAT2,0);
@@ -101,18 +120,21 @@ void send_command(uint8_t* data) {
   clock_byte(*(data++));
   clock_byte(*(data++));
   gpio_put(VP_CMD,1);
+  */
 }
 
 
 void send_image() {
-  sleep_us(250);
-  //gpio_put(VP_DAT1,0);
-  //gpio_put(VP_DAT2,0);
-  uint8_t bl[] = {0x60, 0x00, 0x01};
-  send_command(bl);
-  sleep_us(250);
-  send_command(msg_start_frame);
   pins_to_pio();
+  pio_sm_set_enabled(pio, cmd_sm, true);
+  uint8_t bl[] = {0x60, 0x00, 0x01};
+  sleep_us(20);
+  send_command(bl);
+  sleep_us(20);
+  send_command(msg_start_frame);
+  pio_sm_set_enabled(pio, cmd_sm, false);
+  while (!pio_sm_check_stalled(PIO pio, uint sm)) ;
+  pio_sm_set_enabled(pio, data_sm, true);
   for (int y = 0; y < 121; y++) {
     for (int x = 0; x < 321; x++) {
       uint8_t r,g,b;
@@ -122,6 +144,7 @@ void send_image() {
       pio_sm_put_blocking(vs_pio,vs_sm,interleave(b,g,r));
     }
   }
+  pio_sm_set_enabled(pio, data_sm, false);
   pins_to_sio();
 }
 

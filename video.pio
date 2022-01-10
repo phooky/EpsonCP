@@ -30,12 +30,11 @@
 // side-set pins: start 1, size 1 (clock)
 // We're aiming for 6MHz clock, so a 24MHz PIO speed. Divider target is about 5.2.
 // I'll start out closer to 10, to make sure we can operate at a slower speed first.
-.program vid_send
+.program data_send
 
 .side_set 1
 
 .wrap_target
-SET PINS, 1      side 0 [8]
 OUT PINS, 3      side 0 [4]
 NOP              side 1 [4]
 .wrap
@@ -43,7 +42,7 @@ NOP              side 1 [4]
 // OUT pins: start 2, size 1 (data)
 // side-set pins: start 1, size 1 (clock)
 // SET pins: start 0, size 1 (cmd)
-.program command_send
+.program cmd_send
 
 .side_set 1
 
@@ -56,38 +55,3 @@ NOP              side 1 [4]
 JMP !OSRE loop   side 0 [4]
 SET PINS, 1      side 0 [4]
 .wrap
-
-% c-sdk {
-static inline void pio_vid_init_pins(PIO pio) {
-  for (uint i = VP_CMD; i <= VP_DAT2; i++) {
-    pio_gpio_init(pio, i);
-  }
-}
-
-static inline void pio_vid_init_data(PIO pio, uint sm, uint offset) {
-  // data send
-  pio_sm_config conf = vid_send_program_get_default_config(offset);
-  sm_config_set_set_pins(&conf, 0, 1);
-  sm_config_set_out_pins(&conf, 2, 3);
-  sm_config_set_out_shift(&conf, false, true, 24);
-  sm_config_set_sideset_pins(&conf, 1);
-  sm_config_set_clkdiv(&conf, 2.0);
-  pio_sm_set_pindirs_with_mask(pio, sm, 0x1f, 0x1f);
-  pio_sm_init(pio, sm, offset, &conf);
-  pio_sm_set_enabled(pio, sm, true);
-}
-
-static inline void pio_vid_init_cmd(PIO pio, uint sm, uint offset) {
-  // command_send
-  pio_sm_config conf = command_send_program_get_default_config(offset);
-  sm_config_set_set_pins(&conf, 0, 1);
-  sm_config_set_out_pins(&conf, 2, 1);
-  sm_config_set_out_shift(&conf, false, false, 24);
-  sm_config_set_sideset_pins(&conf, 1);
-  sm_config_set_clkdiv(&conf, 10.0);
-  pio_sm_set_pindirs_with_mask(pio, sm, 0x1f, 0x1f);
-  pio_sm_init(pio, sm, offset, &conf);
-  pio_sm_set_enabled(pio, sm, true);
-}
-
-%}
