@@ -112,17 +112,6 @@ void clock_byte(uint8_t b) {
 }
 
 void send_command(uint8_t* data) {
-  /*
-  wait_for_stall(pio, data_sm);
-  gpio_put(VP_CMD,0);
-  sleep_us(2);
-  for (uint i = 0; i < 3; i++) {
-    pio_sm_put_blocking(pio,data_sm,interleave(data[i],data[i],data[i]));
-  }
-  wait_for_stall(pio, data_sm);
-  sleep_us(2);
-  gpio_put(VP_CMD,1);
-  sleep_us(2);*/
   sleep_us(2);
   gpio_put(VP_DAT1,0);
   gpio_put(VP_DAT2,0);
@@ -137,9 +126,6 @@ void send_command(uint8_t* data) {
 }
 
 void send_image() {
-  uint8_t bl[] = {0x60, 0x00, 0x01};
-  sleep_us(20);
-  send_command(bl);
   sleep_us(20);
   send_command(msg_start_frame);
   pins_to_pio();
@@ -165,4 +151,7 @@ void init_lcd() {
     send_command(msg_init_lcd + start);
     start += 3;
   }
+  uint8_t bl[] = {0x60, 0x00, 0x01};
+  sleep_us(20);
+  send_command(bl);
 }

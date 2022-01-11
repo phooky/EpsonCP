@@ -73,10 +73,11 @@ Probable commands
 
 | 1st byte | 2nd byte | 3rd byte | Interpretation |
 |----------|----------|----------|----------------|
+| 0x30     | 0x00     | M        | Set data mode (std 0x01) |
 | 0x31     | 0x00     | 0x01     | Start sending video frame data |
 | 0x32     | X        | X        | Set horizontal resolution to X |
 | 0x33     | Y        | Y        | Set vertical resolution to Y |
-| 0x60     | 0x00     | V        | Turn on backlight (V=1 on) | 
+| 0x60     | 0x00     | V        | Turn on backlight (V=1 on) (takes effect at next frame)| 
 
 
 Data transaction

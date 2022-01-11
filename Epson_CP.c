@@ -94,9 +94,18 @@ void video_core() {
 }
 */
 
+uint8_t hexchar(int c) {
+  if (c >= '0' && c <= '9') { return c - '0'; }
+  if (c >= 'a' && c <= 'f') { return (c - 'a') + 10; }
+  if (c >= 'A' && c <= 'F') { return (c - 'A') + 10; }
+  return 0xff;
+}
+ 
 int main()
 {
+  sleep_us(100);
     stdio_init_all();
+  sleep_us(2000);
     puts("Hello, world!");
     initialize_gpio();
     init_video();
@@ -119,6 +128,21 @@ int main()
             printf("*** Resetting into bootloader ***");
             c = -1;
             reset_usb_boot(0,0);
+	} else if (c == 'C') {
+	  // read next 6 chars as hex
+	  uint8_t cmd[3] = { 0,0,0 };
+	  for (uint8_t i = 0; i < 6; i++) {
+	    c = getchar_timeout_us(8000000);
+	    if (c == -1) { puts("command entry timeout\n"); break; }
+	    uint8_t h = hexchar(c);
+	    if (h >= 16) { c = -1; printf("non-hex char '%c'\n",c); break; }
+	    cmd[i/2] |= h << ( (1-(i%2)) * 4 );
+	  }
+	  if (c != -1) {
+	    printf("Sending command %x%x%x\n",cmd[0],cmd[1],cmd[2]);
+	    send_command(cmd);
+	    c = -1;
+	  }
 	} else if (c == 'v') {
 	  c = -1;
 	  send_image();
