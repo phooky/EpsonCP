@@ -3,6 +3,7 @@
 #include "pins.h"
 #include "pico/stdlib.h"
 #include "video.pio.h"
+#include "video.h"
 
 size_t msg_init_lcd_len = 144;
 uint8_t msg_init_lcd[] = {
@@ -24,10 +25,6 @@ size_t msg_start_frame_len = 3;
 uint8_t msg_start_frame[] = {
   0x31, 0x00, 0x01,
 };
-
-typedef struct {
-  uint8_t r; uint8_t g; uint8_t b;
-} __attribute__((packed)) color_t;
 
 uint8_t framebuf[320][119];
 color_t palette[256];
