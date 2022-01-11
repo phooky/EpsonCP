@@ -25,6 +25,13 @@ uint8_t msg_start_frame[] = {
   0x31, 0x00, 0x01,
 };
 
+typedef struct {
+  uint8_t r; uint8_t g; uint8_t b;
+} __attribute__((packed)) color_t;
+
+uint8_t framebuf[320][119];
+color_t palette[256];
+
 static inline void init_pin2(pin_t pin, uint value) {
     gpio_init(pin);
     gpio_set_dir(pin, GPIO_OUT);
@@ -32,8 +39,8 @@ static inline void init_pin2(pin_t pin, uint value) {
 }
 
 PIO pio = pio0;
-uint data_sm = 0, cmd_sm = 1;
-uint data_offset, cmd_offset;
+uint data_sm = 0;
+uint data_offset;
 
 void pins_to_sio() {
   init_pin2(VP_CLK,1);
@@ -44,7 +51,7 @@ void pins_to_sio() {
 }
 
 void pins_to_pio() {
-  for (uint i = VP_CMD; i <= VP_DAT2; i++) {
+  for (uint i = VP_CLK; i <= VP_DAT2; i++) {
     pio_gpio_init(pio, i);
   }
 }
@@ -52,32 +59,31 @@ void pins_to_pio() {
 static inline bool pio_sm_check_stalled(PIO pio, uint sm) {
   return !!(pio->fdebug & (1 << (PIO_FDEBUG_TXSTALL_LSB+sm)));
 }
-  
-void init_video() {
-  pins_to_sio();
-  data_offset = pio_add_program(pio, &vid_send_program);
-  cmd_offset = pio_add_program(pio, &cmd_send_program);
 
+void wait_for_stall(PIO pio, uint sm) {
+  while (!pio_sm_check_stalled(pio,sm)) ;
+}
+
+void init_video() {
+  for (uint i = 0; i < 256; i++) {
+    palette[i] = (color_t){ r : i, g : i/2, b : i };
+  }
+  for (int y = 0; y < 120; y++) {
+    for (int x = 0; x < 320; x++) {
+      framebuf[x][y] = ((x%20) == 1 || (y%20) == 1)?255:((x+y)%160);
+    }
+  }
+  pins_to_sio();
+  data_offset = pio_add_program(pio, &data_send_program);
   pio_sm_config data_conf = data_send_program_get_default_config(data_offset);
-  pio_sm_config cmd_conf = cmd_send_program_get_default_config(cmd_offset);
   // Configuration for data send program
   sm_config_set_out_pins(&data_conf, 2, 3);
   sm_config_set_out_shift(&data_conf, false, true, 24);
   sm_config_set_sideset_pins(&data_conf, 1);
-  sm_config_set_clkdiv(&data_conf, 2.0);
+  sm_config_set_clkdiv(&data_conf, 7.0);
   pio_sm_set_pindirs_with_mask(pio, data_sm, 0x1e, 0x1e);
   pio_sm_init(pio, data_sm, data_offset, &data_conf);
-
-  // Configuration for command send program
-  sm_config_set_set_pins(&cmd_conf, 0, 1);
-  sm_config_set_out_pins(&cmd_conf, 2, 1);
-  sm_config_set_out_shift(&cmd_conf, false, false, 24);
-  sm_config_set_sideset_pins(&cmd_conf, 1);
-  sm_config_set_clkdiv(&cmd_conf, 10.0);
-  pio_sm_set_pindirs_with_mask(pio, cmd_sm, 0x1f, 0x1f);
-  pio_sm_init(pio, cmd_sm, cmd_offset, &cmd_conf);
-  
-  //  pio_sm_set_enabled(pio, sm, true);
+  pio_sm_set_enabled(pio, data_sm, true);
 }
 
 uint32_t interleave_zero(uint32_t v) {
@@ -101,54 +107,59 @@ void clock_byte(uint8_t b) {
     i--;
     gpio_put(VP_CLK,0);
     gpio_put(VP_DAT0, (b >> i) & 0x01);
-    sleep_us(1);
     gpio_put(VP_CLK,1);
-    sleep_us(1);
   } while (i > 0);
 }
 
 void send_command(uint8_t* data) {
-  uint32_t cmd = data[0] << 24 | data[1] << 16 | data[2] << 8;
-  pio_sm_put_blocking(vs_pio,cmd_sm,cmd);
   /*
-  sleep_us(5);
+  wait_for_stall(pio, data_sm);
+  gpio_put(VP_CMD,0);
+  sleep_us(2);
+  for (uint i = 0; i < 3; i++) {
+    pio_sm_put_blocking(pio,data_sm,interleave(data[i],data[i],data[i]));
+  }
+  wait_for_stall(pio, data_sm);
+  sleep_us(2);
+  gpio_put(VP_CMD,1);
+  sleep_us(2);*/
+  sleep_us(2);
   gpio_put(VP_DAT1,0);
   gpio_put(VP_DAT2,0);
   gpio_put(VP_CMD,0);
-  sleep_us(5);
+  sleep_us(2);
   clock_byte(*(data++));
   clock_byte(*(data++));
   clock_byte(*(data++));
+  sleep_us(2);
   gpio_put(VP_CMD,1);
-  */
+  sleep_us(2);
 }
 
-
 void send_image() {
-  pins_to_pio();
-  pio_sm_set_enabled(pio, cmd_sm, true);
   uint8_t bl[] = {0x60, 0x00, 0x01};
   sleep_us(20);
   send_command(bl);
   sleep_us(20);
   send_command(msg_start_frame);
-  pio_sm_set_enabled(pio, cmd_sm, false);
-  while (!pio_sm_check_stalled(PIO pio, uint sm)) ;
-  pio_sm_set_enabled(pio, data_sm, true);
-  for (int y = 0; y < 121; y++) {
+  pins_to_pio();
+  for (int y = 0; y < 120; y++) {
     for (int x = 0; x < 321; x++) {
-      uint8_t r,g,b;
-      r= (x == 1 || x == 318 || y == 1 || y == 118)?255:0;
-      b=y*3;
-      g=x;
-      pio_sm_put_blocking(vs_pio,vs_sm,interleave(b,g,r));
+      if (x >= 320 || y >= 119) pio_sm_put_blocking(pio,data_sm,0);
+      else {
+	color_t c = palette[framebuf[x][y]];
+	pio_sm_put_blocking(pio,data_sm,interleave(c.b,c.g,c.r));
+      }
     }
   }
-  pio_sm_set_enabled(pio, data_sm, false);
+  palette[255].r = 255 - palette[255].r;
+  palette[255].b = 255 - palette[255].g;
+  palette[255].g = 255 - palette[255].b;
   pins_to_sio();
 }
 
 void init_lcd() {
+  pins_to_sio();
   size_t start = 0;
   while (start < msg_init_lcd_len) {
     send_command(msg_init_lcd + start);

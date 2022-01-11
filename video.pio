@@ -35,23 +35,6 @@
 .side_set 1
 
 .wrap_target
-OUT PINS, 3      side 0 [4]
-NOP              side 1 [4]
-.wrap
-
-// OUT pins: start 2, size 1 (data)
-// side-set pins: start 1, size 1 (clock)
-// SET pins: start 0, size 1 (cmd)
-.program cmd_send
-
-.side_set 1
-
-.wrap_target
-PULL BLOCK       side 0
-SET PINS, 0      side 0 [8]
-loop:
-OUT PINS, 1      side 0 [4]
-NOP              side 1 [4]
-JMP !OSRE loop   side 0 [4]
-SET PINS, 1      side 0 [4]
+OUT PINS, 3      side 0
+NOP              side 1
 .wrap
