@@ -135,9 +135,6 @@ void send_image() {
       }
     }
   }
-  palette[255].r = 255 - palette[255].r;
-  palette[255].b = 255 - palette[255].g;
-  palette[255].g = 255 - palette[255].b;
   pins_to_sio();
 }
 

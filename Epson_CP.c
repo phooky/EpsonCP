@@ -143,6 +143,26 @@ int main()
 	    send_command(cmd);
 	    c = -1;
 	  }
+	} else if (c == 'P') {
+	  int i;
+	  c = -1;
+	  for (i = 0; i < 256; i++) {
+	    int r = getchar_timeout_us(1000000);
+	    int g = getchar_timeout_us(1000000);
+	    int b = getchar_timeout_us(1000000);
+	    if ((r == -1) || (g == -1) || (b == -1)) break;
+	    palette[i].r = r; 
+	    palette[i].g = g; 
+	    palette[i].b = b; 
+	  }
+	  printf("Got %d.\n",i);
+	} else if (c == 'V') {
+	  c = -1;
+	  uint8_t* fb = &framebuf[0][0];
+	  for (uint i =0; i < 320*119; i++) {
+	    *(fb++) = (uint8_t)getchar_timeout_us(10000);
+	  }
+	  send_image();
 	} else if (c == 'v') {
 	  c = -1;
 	  send_image();
