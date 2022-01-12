@@ -2,6 +2,8 @@
 #include "pico/stdlib.h"
 #include "pico/bootrom.h"
 #include "pico/multicore.h"
+#include "pico/stdio/driver.h"
+#include "tusb.h"
 
 #include "keymap.h"
 #include "pins.h"
@@ -100,7 +102,25 @@ uint8_t hexchar(int c) {
   if (c >= 'A' && c <= 'F') { return (c - 'A') + 10; }
   return 0xff;
 }
- 
+
+int read_from_usb(uint8_t* buf, int len, uint32_t timeout_us) {
+  uint32_t until = make_timeout_time_us(timeout_us);
+  int total_read = 0;
+  do {
+    if (tud_cdc_connected() && tud_cdc_available()) {
+      int read = tud_cdc_read(buf, len);
+      //int read = stdio_usb.in_chars(buf, len);
+      if (read > 0) {
+	total_read += read;
+	len -= read;
+	buf += read;
+	if (len == 0) break;
+      }
+    }
+  } while (!time_reached(until));
+  return total_read;
+}
+
 int main()
 {
   sleep_us(100);
@@ -144,24 +164,13 @@ int main()
 	    c = -1;
 	  }
 	} else if (c == 'P') {
-	  int i;
 	  c = -1;
-	  for (i = 0; i < 256; i++) {
-	    int r = getchar_timeout_us(1000000);
-	    int g = getchar_timeout_us(1000000);
-	    int b = getchar_timeout_us(1000000);
-	    if ((r == -1) || (g == -1) || (b == -1)) break;
-	    palette[i].r = r; 
-	    palette[i].g = g; 
-	    palette[i].b = b; 
-	  }
+	  int i = read_from_usb((uint8_t*)&palette[0],256*3,1000000);
 	  printf("Got %d.\n",i);
 	} else if (c == 'V') {
 	  c = -1;
-	  uint8_t* fb = &framebuf[0][0];
-	  for (uint i =0; i < 320*119; i++) {
-	    *(fb++) = (uint8_t)getchar_timeout_us(10000);
-	  }
+	  int count = read_from_usb(&framebuf[0][0],320*119,2000000);
+	  printf("count %d of %d\n",count,320*119);
 	  send_image();
 	} else if (c == 'v') {
 	  c = -1;
