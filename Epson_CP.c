@@ -107,9 +107,9 @@ int read_from_usb(uint8_t* buf, int len, uint32_t timeout_us) {
   uint32_t until = make_timeout_time_us(timeout_us);
   int total_read = 0;
   do {
-    if (tud_cdc_connected() && tud_cdc_available()) {
-      int read = tud_cdc_read(buf, len);
-      //int read = stdio_usb.in_chars(buf, len);
+    if (1) { //(tud_cdc_connected() && tud_cdc_available()) {
+      //int read = tud_cdc_read(buf, len);
+      int read = stdio_usb.in_chars(buf, len);
       if (read > 0) {
 	total_read += read;
 	len -= read;

@@ -4,9 +4,8 @@ import sys
 import serial
 from PIL import Image, ImageOps
 
-s=serial.Serial("/dev/ttyACM0",baudrate=1152000,timeout=0.01,write_timeout=20)
 
-data = b''
+data = b'V'
 if len(sys.argv) > 1:
     im = ImageOps.grayscale(Image.open(sys.argv[1]))
     for x in range(320):
@@ -23,15 +22,22 @@ else:
         for y in range(119):
             data = data + struct.pack('B',(x) % 256)
 
-s.write(b'V')
-s.write(data)
-s.flush()
-    
-s.write(b'v')
-try:
-    print(s.read(100))
-except e:
-    print(e)
+data = data + b'v'
 
+if 0:
+    s=serial.Serial("/dev/ttyACM0",baudrate=1152000,timeout=0.01,write_timeout=20)
+    s.write(b'V')
+    s.write(data)
+    s.flush()    
+    s.write(b'v')
+    try:
+        print(s.read(100))
+    except e:
+        print(e)
+    s.close()
+else:
+    f=open("/dev/ttyACM0","wb")
+    f.write(data)
+    f.flush()
+    f.close()
     
-s.close()
