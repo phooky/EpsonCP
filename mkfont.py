@@ -50,32 +50,65 @@ class Glyph:
         for y in range(self.h):
             for x in range(self.w):
                 print("{:4}".format(self.bitmap[x + self.w*y]),end='')
-            if y == face.glyph.bitmap_top - 1:
+            if y == self.top - 1:
                 print(" -- baseline")
             else:
                 print()
 
-    def print_c(self):
-        pass
+    def pad_top(self,h):
+        if (h <= self.top):
+            return
+        delta = h - self.top
+        self.bitmap = ([0] * (self.w * delta)) + self.bitmap
+        self.h = self.h + delta
+        self.top = h
         
+    def kitty(self):
+        from base64 import b64encode
+        b = b'\00\00\00' * self.left
+        for y in range(self.h):
+            st = self.w * y
+            en = st + self.w
+            for _ in range(2):
+                b = b + bytes([int(x*255/4) for x in self.bitmap[st:en] for _ in range(3)])
+                
+        esc = b'\033'
+        body ='_Gf=24,s={},v={},a=T;'.format(self.w, self.h*2).encode('ascii')
+        sys.stdout.buffer.write(esc+body+b64encode(b)+esc+b'\\')
+        sys.stdout.flush()
+
+        
+        
+class EpsonFont:
+    def __init__(self, face, ptsize):
+        self.ascii_map = [None] * 128
+        self.face = face
+        self.face.set_char_size( ptsize * 64)
+    def add_glyph(self, char):
+        cs = char.encode('ascii')
+        if len(cs) > 1 or cs[0] > 127:
+            print("Character {} is out of ASCII range".format(char))
+            return
+        self.face.load_char(char)
+        bitmap = self.face.glyph.bitmap
+        g = Glyph(bitmap.width, bitmap.rows,
+                  self.face.glyph.bitmap_left,
+                  self.face.glyph.bitmap_top,
+                  bitmap.buffer.copy())
+        g.even_h()
+        g.squash()
+        g.reduce_colors()
+        self.ascii_map[cs[0]] = g
+        sys.stdout.write("Inserting {} :".format(char))
+        sys.stdout.flush()
+        g.kitty()
+        print()
 
 
 
 font_path = lookup_result.stdout;
 face = freetype.Face(font_path)
-face.set_char_size( 18*64 )
-for c in 'S':
-    face.load_char(c)
-    bitmap = face.glyph.bitmap
-    g = Glyph(bitmap.width,bitmap.rows,
-              face.glyph.bitmap_left,
-              face.glyph.bitmap_top,
-              bitmap.buffer)
-    g.print()
-    g.even_h()
-    g.print()
-    print()
-    g.squash()
-    g.reduce_colors()
-    g.print()
-    print()
+ef = EpsonFont(face,18)
+for c in 'abcdefg':
+    ef.add_glyph(c)
+
