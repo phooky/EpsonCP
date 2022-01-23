@@ -8,6 +8,7 @@
 #include "keymap.h"
 #include "pins.h"
 #include "video.h"
+#include "font.h"
 
 // RCLK shifts to registers on rising edge;
 // SH/LD' loads during LOW but needs to be high
