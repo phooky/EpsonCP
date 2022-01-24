@@ -123,6 +123,9 @@ int read_from_usb(uint8_t* buf, int len, uint32_t timeout_us) {
   return total_read;
 }
 
+#define TEXT_BUFFER_LEN 32
+char text_buffer[TEXT_BUFFER_LEN];
+
 int main()
 {
   sleep_us(100);
@@ -137,7 +140,7 @@ int main()
     
     while (true) {
         int c = getchar_timeout_us(100);
-        if (c == PICO_ERROR_TIMEOUT) {
+        if (c == PICO_ERROR_TIMEOUT) { // Scan for keypresses
 	  Keypress kp = scan();
 	  if ((kp.type != last_kp.type ||
 	       kp.row != last_kp.row ||
@@ -146,11 +149,11 @@ int main()
 	    printf("Key down: %s (%d, %d)\n",keyname(keycode(kp.row,kp.col)),kp.row,kp.col);
 	  }
 	  last_kp = kp;
-        } else if (c == 'R') {
+        } else if (c == 'R') { // Reset Pi Pico into bootloader
             printf("*** Resetting into bootloader ***");
             c = -1;
             reset_usb_boot(0,0);
-	} else if (c == 'C') {
+	} else if (c == 'C') {  // Send arbitrary LCD command
 	  // read next 6 chars as hex
 	  uint8_t cmd[3] = { 0,0,0 };
 	  for (uint8_t i = 0; i < 6; i++) {
@@ -165,31 +168,38 @@ int main()
 	    send_command(cmd);
 	    c = -1;
 	  }
-	} else if (c == 'P') {
+	} else if (c == 'P') { // Load up a custom palette
 	  c = -1;
 	  int i = read_from_usb((uint8_t*)&palette[0],256*3,1000000);
 	  printf("Got %d.\n",i);
-	} else if (c == 'V') {
+	} else if (c == 'V') { // Load framebuffer over USB
 	  c = -1;
 	  int count = read_from_usb(&framebuf[0][0],320*119,2000000);
 	  printf("count %d of %d\n",count,320*119);
 	  send_image();
-	} else if (c == 'v') {
+	} else if (c == 'v') { // Display current framebuffter
 	  c = -1;
 	  send_image();
-	} else if (c == 't') {
+	} else if (c == 'E') { // erase video buffer
+	  clear_buffer();
 	  c = -1;
-	  render_text( 10, 20, "hey you", font_hack);
-	} else if (c == 's') {
-	  // do scan
-	  scan_cols(0x01);
-	  printf("*** Full matrix scan ***\n");
-	  for (uint8_t i = 1; i <= 8; i++) {
-	    printf("(scan %x) ",1<<(i%8));
-	    printf("Row %x: %x\n",i-1,scan_cols(1<<(i%8)));
+	} else if (c == 'T') {
+	  // load and render text buffer
+	  char* cbuf = text_buffer;
+	  const char* cbend = text_buffer + TEXT_BUFFER_LEN - 1;
+	  c = getchar_timeout_us(8000000);
+	  while (c != '\r' && c != '\n' && c != -1 && cbuf != cbend) {
+	    *(cbuf++) = c;
+	    c = getchar_timeout_us(8000000);
 	  }
-	  printf("--- scan done --- \n");
-	} else if (c == '\n' || c == '\r') {
+	  if (c != -1) {
+	    *cbuf = '\0';
+	    render_text( 10, 20, text_buffer, font_hack);
+	  } else {
+	    printf("Text enty timeout.\n");
+	  }
+	  c = -1;
+	} else if (c == '\n' || c == '\r') { // Test that Pico is responding
 	  printf("Hello there.\n");
         } else {
 	  printf("Unrecognized data.\n");

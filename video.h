@@ -5,6 +5,7 @@ void init_video();
 
 void init_lcd();
 void send_image();
+void clear_buffer();
 
 void send_command(uint8_t* data);
 

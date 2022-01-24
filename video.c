@@ -61,6 +61,14 @@ void wait_for_stall(PIO pio, uint sm) {
   while (!pio_sm_check_stalled(pio,sm)) ;
 }
 
+void clear_buffer() {
+  for (int y = 0; y < 120; y++) {
+    for (int x = 0; x < 320; x++) {
+      framebuf[x][y] = 0;
+    }
+  }
+}
+
 void init_video() {
   for (uint i = 0; i < 256; i++) {
     palette[i] = (color_t){ r : i, g : i/2, b : i };
