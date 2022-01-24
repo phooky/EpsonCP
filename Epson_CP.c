@@ -9,6 +9,7 @@
 #include "pins.h"
 #include "video.h"
 #include "font.h"
+#include "font_hack.h"
 
 // RCLK shifts to registers on rising edge;
 // SH/LD' loads during LOW but needs to be high
@@ -176,6 +177,9 @@ int main()
 	} else if (c == 'v') {
 	  c = -1;
 	  send_image();
+	} else if (c == 't') {
+	  c = -1;
+	  render_text( 10, 20, "hey you", font_hack);
 	} else if (c == 's') {
 	  // do scan
 	  scan_cols(0x01);

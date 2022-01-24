@@ -24,12 +24,14 @@ void render_text(uint16_t x, uint16_t y, char* string, uint8_t* font) {
     if (c < fhdr->first_ch || c > fhdr->last_ch) continue;
     uint16_t coff = fhdr->lookup_table[c - fhdr->first_ch];
     character_data* cdat = (character_data*)(font + coff);
-    for (uint8_t cy = cdat->top; cy < cdat->bot; cy++) {
-      for (uint8_t cx = 0; cx < pw; cx++) {
+    for (uint8_t cy = cdat->top; cy < cdat->bottom; cy++) {
+      uint8_t lineoff = cdat->bw * (cy - cdat->top);
+      for (uint8_t cx = 0; cx < cdat->pw; cx++) {
+	uint8_t db = cdat->data[ lineoff + (cx/4) ];
+	framebuf[cx + x][cy + y] |= (db >> ((cx%4)*2) & 0x03) << 6;
       }
     }
     x = x + cdat->pw + 1;
-    string++;
   }
 }
 
