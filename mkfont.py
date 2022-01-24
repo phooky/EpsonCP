@@ -167,6 +167,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate EpsonCP fonts from freetype fonts.')
     parser.add_argument('font', default='hack', help='Name of the font to process')
     parser.add_argument('size', type=int, default=24, nargs='?', help='Size in pixels of font')
+    parser.add_argument('-b', '--bin', action='store_true')
     args = parser.parse_args()
     lookup_result = subprocess.run(['fc-match', '-f', '%{file}', args.font ],
                                    capture_output=True,
@@ -182,4 +183,8 @@ if __name__ == '__main__':
         ef.add_glyph(c)
     font = ef.write_font()
     sys.stderr.write("Font {}, binary size {}\n".format(args.font,len(font)))
-    print(font_as_C_header(font))
+    if args.bin:
+        sys.stdout.buffer.write(bytes(font))
+        sys.stdout.buffer.flush()
+    else:
+        print(font_as_C_header(font))
