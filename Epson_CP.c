@@ -126,6 +126,11 @@ int read_from_usb(uint8_t* buf, int len, uint32_t timeout_us) {
 #define TEXT_BUFFER_LEN 32
 char text_buffer[TEXT_BUFFER_LEN];
 
+#define FONT_BUFFER_LEN 4096
+char font_buffer[FONT_BUFFER_LEN];
+
+uint8_t* curfont = font_hack;
+
 int main()
 {
   sleep_us(100);
@@ -151,7 +156,6 @@ int main()
 	  last_kp = kp;
         } else if (c == 'R') { // Reset Pi Pico into bootloader
             printf("*** Resetting into bootloader ***");
-            c = -1;
             reset_usb_boot(0,0);
 	} else if (c == 'C') {  // Send arbitrary LCD command
 	  // read next 6 chars as hex
@@ -166,23 +170,30 @@ int main()
 	  if (c != -1) {
 	    printf("Sending command %x%x%x\n",cmd[0],cmd[1],cmd[2]);
 	    send_command(cmd);
-	    c = -1;
 	  }
 	} else if (c == 'P') { // Load up a custom palette
-	  c = -1;
 	  int i = read_from_usb((uint8_t*)&palette[0],256*3,1000000);
 	  printf("Got %d.\n",i);
 	} else if (c == 'V') { // Load framebuffer over USB
-	  c = -1;
 	  int count = read_from_usb(&framebuf[0][0],320*119,2000000);
 	  printf("count %d of %d\n",count,320*119);
 	  send_image();
 	} else if (c == 'v') { // Display current framebuffter
-	  c = -1;
 	  send_image();
 	} else if (c == 'E') { // erase video buffer
 	  clear_buffer();
-	  c = -1;
+	} else if (c == 'F') { // read in font buffer
+	  c = getchar_timeout_us(3000);
+	  uint16_t len = c;
+	  c = getchar_timeout_us(3000);
+	  len += c << 8;
+	  if (len > FONT_BUFFER_LEN) {
+	    printf("Font too big!\n");
+	  } else {
+	    int count = read_from_usb(&font_buffer[0],len,2000000);
+	    printf("count %d of %d\n",count,len);
+	    if (count == len) { curfont = font_buffer; }
+	  }
 	} else if (c == 'T') {
 	  // load and render text buffer
 	  char* cbuf = text_buffer;
@@ -194,16 +205,14 @@ int main()
 	  }
 	  if (c != -1) {
 	    *cbuf = '\0';
-	    render_text( 10, 20, text_buffer, font_hack);
+	    render_text( 10, 20, text_buffer, curfont);
 	  } else {
 	    printf("Text enty timeout.\n");
 	  }
-	  c = -1;
 	} else if (c == '\n' || c == '\r') { // Test that Pico is responding
 	  printf("Hello there.\n");
         } else {
 	  printf("Unrecognized data.\n");
-	  c = -1; 
         }
     }
     return 0;

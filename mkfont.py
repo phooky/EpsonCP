@@ -4,6 +4,7 @@ import freetype
 import sys
 import subprocess
 import struct
+import serial
 from base64 import b64encode
 
 class Glyph:
@@ -168,6 +169,7 @@ if __name__ == '__main__':
     parser.add_argument('font', default='hack', help='Name of the font to process')
     parser.add_argument('size', type=int, default=24, nargs='?', help='Size in pixels of font')
     parser.add_argument('-b', '--bin', action='store_true')
+    parser.add_argument('-u', '--upload', action='store_true')
     args = parser.parse_args()
     lookup_result = subprocess.run(['fc-match', '-f', '%{file}', args.font ],
                                    capture_output=True,
@@ -183,7 +185,16 @@ if __name__ == '__main__':
         ef.add_glyph(c)
     font = ef.write_font()
     sys.stderr.write("Font {}, binary size {}\n".format(args.font,len(font)))
-    if args.bin:
+    if args.upload:
+        s = serial.Serial("/dev/ttyACM0",timeout=5)
+        s.write(b'F')
+        s.write(struct.pack("<H",len(font)));
+        s.write(bytes(font))
+        # test string
+        s.write(b'ETHello world\nv')
+        print(s.read(100))
+        s.close()
+    elif args.bin:
         sys.stdout.buffer.write(bytes(font))
         sys.stdout.buffer.flush()
     else:

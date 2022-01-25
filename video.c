@@ -71,7 +71,7 @@ void clear_buffer() {
 
 void init_video() {
   for (uint i = 0; i < 256; i++) {
-    palette[i] = (color_t){ r : i, g : i/2, b : i };
+    palette[i] = (color_t){ r : i, g : i, b : i };
   }
   for (int y = 0; y < 120; y++) {
     for (int x = 0; x < 320; x++) {
